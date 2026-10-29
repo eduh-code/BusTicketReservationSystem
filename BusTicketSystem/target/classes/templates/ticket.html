@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Digital Bus Ticket</title>
+    <style>
+        * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+        body { margin: 0; padding: 24px; background: #f2f5f8; color: #263238; }
+        main { max-width: 640px; margin: 35px auto; padding: 30px; background: white; border-radius: 14px; box-shadow: 0 8px 28px #00000014; }
+        h1 { color: #087b43; text-align: center; }
+        .ticket-no { text-align: center; font-size: 22px; font-weight: 700; margin: 22px 0; }
+        dl { display: grid; grid-template-columns: 1fr 1.3fr; gap: 13px; border-top: 1px dashed #aeb8b2; padding-top: 20px; }
+        dt { color: #64716a; } dd { margin: 0; font-weight: 600; }
+        .actions { display: flex; justify-content: space-between; margin-top: 25px; }
+        a, button { padding: 10px 14px; border: 0; border-radius: 7px; background: #087b43; color: white; text-decoration: none; cursor: pointer; }
+        @media print { body { background: white; } .actions { display: none; } main { box-shadow: none; } }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Bus e-Ticket</h1>
+    <div class="ticket-no">Ticket <span th:text="${payment.ticketNumber}"></span></div>
+    <dl>
+        <dt>Passenger</dt><dd th:text="${booking.passengerName}"></dd>
+        <dt>Bus name</dt><dd th:text="${bus.busName}"></dd>
+        <dt>Plate number</dt><dd th:text="${bus.busNumber}"></dd>
+        <dt>Route</dt><dd><span th:text="${bus.source}"></span> to <span th:text="${bus.destination}"></span></dd>
+        <dt>Selected seats</dt><dd th:text="${booking.selectedSeats}"></dd>
+        <dt>Total paid</dt><dd>Tshs <span th:text="${#numbers.formatDecimal(booking.totalPrice, 1, 'COMMA', 0, 'POINT')}"></span>/=</dd>
+        <dt>Payment method</dt><dd th:text="${payment.paymentMethod}"></dd>
+        <dt>Transaction ID</dt><dd th:text="${payment.transactionId}"></dd>
+        <dt>Payment status</dt><dd th:text="${payment.status}"></dd>
+    </dl>
+    <div class="actions">
+        <a th:href="@{/results(source=${bus.source},destination=${bus.destination})}">View this route</a>
+        <a th:href="@{/}">New search</a>
+        <button type="button" onclick="window.print()">Print ticket</button>
+    </div>
+</main>
+</body>
+</html>

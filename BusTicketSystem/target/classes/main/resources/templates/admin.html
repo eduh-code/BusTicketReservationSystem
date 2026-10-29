@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin - Bus Routes and Buses</title>
+    <style>
+        * { box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+        body { margin: 0; padding: 24px; background: #f2f5f8; color: #263238; }
+        main { max-width: 920px; margin: auto; }
+        section { background: white; margin: 20px 0; padding: 24px; border-radius: 12px; box-shadow: 0 5px 20px #00000010; }
+        h1, h2 { color: #087b43; }
+        label { display: block; margin: 13px 0 6px; font-weight: 600; }
+        input, select, button { width: 100%; padding: 11px; border: 1px solid #ccd3d8; border-radius: 7px; font-size: 15px; }
+        button { margin-top: 14px; border: 0; background: #087b43; color: white; font-weight: 700; cursor: pointer; }
+        .route-list { padding-left: 20px; line-height: 1.9; }
+        .status { min-height: 20px; margin-top: 10px; }
+        a { color: #1267a5; }
+    </style>
+</head>
+<body th:attr="data-app-root=@{/}">
+<main>
+    <p><a th:href="@{/}">← Return to passenger search</a></p>
+    <h1>Bus administration</h1>
+    <p>Manage Tanzanian routes, transport fares, and buses.</p>
+
+    <section>
+        <h2>Add route</h2>
+        <form id="routeForm">
+            <label for="routeSource">From</label>
+            <input id="routeSource" placeholder="Dar es Salaam" required>
+            <label for="routeDestination">To</label>
+            <input id="routeDestination" placeholder="Dodoma" required>
+            <label for="routeFee">Transportation fee (Tshs)</label>
+            <input id="routeFee" type="number" min="0" step="1" required>
+            <button type="submit">Add route</button>
+        </form>
+        <div id="routeMessage" class="status" role="status"></div>
+    </section>
+
+    <section>
+        <h2>Register bus</h2>
+        <form id="busForm">
+            <label for="busName">Bus name</label>
+            <input id="busName" required>
+            <label for="busNumber">Plate number</label>
+            <input id="busNumber" placeholder="T 123 ABC" required>
+            <label for="totalSeats">Total seats</label>
+            <input id="totalSeats" type="number" min="1" max="200" required>
+            <label for="busRoute">Route</label>
+            <select id="busRoute" required><option value="">Select a route</option></select>
+            <label for="departureTime">Departure time (optional)</label>
+            <input id="departureTime" placeholder="06:00 AM">
+            <label for="arrivalTime">Arrival time (optional)</label>
+            <input id="arrivalTime" placeholder="12:00 PM">
+            <button type="submit">Register bus</button>
+        </form>
+        <div id="busMessage" class="status" role="status"></div>
+    </section>
+
+    <section>
+        <h2>Update transportation fee</h2>
+        <label for="feeRoute">Route</label>
+        <select id="feeRoute"><option value="">Select a route</option></select>
+        <label for="updatedFee">New fee (Tshs)</label>
+        <input id="updatedFee" type="number" min="0" step="1">
+        <button id="updateFeeButton" type="button">Update fee</button>
+        <div id="feeMessage" class="status" role="status"></div>
+    </section>
+
+    <section>
+        <h2>Existing routes</h2>
+        <ul id="routeList" class="route-list"></ul>
+        <div id="loadMessage" class="status" role="status"></div>
+    </section>
+</main>
+<script>
+    const appRoot = document.body.dataset.appRoot;
+    const routeSelects = [document.getElementById('busRoute'), document.getElementById('feeRoute')];
+
+    async function requestJson(path, options = {}) {
+        const response = await fetch(`${appRoot}${path}`, {
+            ...options,
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.message || data.error || `Request failed (${response.status})`);
+        }
+        return data;
+    }
+
+    function showMessage(id, text, isError = false) {
+        const target = document.getElementById(id);
+        target.textContent = text;
+        target.style.color = isError ? '#b00020' : '#087b43';
+    }
+
+    async function loadRoutes() {
+        try {
+            const routes = await requestJson('api/admin/routes');
+            routeSelects.forEach(select => {
+                select.replaceChildren(new Option('Select a route', ''));
+                routes.forEach(route => {
+                    select.add(new Option(
+                        `${route.source} to ${route.destination} — Tshs ${Number(route.transportationFee).toLocaleString()}/=`,
+                        route.id
+                    ));
+                });
+            });
+            const list = document.getElementById('routeList');
+            list.replaceChildren();
+            routes.forEach(route => {
+                const item = document.createElement('li');
+                item.textContent = `${route.source} to ${route.destination} — Tshs ${Number(route.transportationFee).toLocaleString()}/=`;
+                list.appendChild(item);
+            });
+            if (routes.length === 0) {
+                showMessage('loadMessage', 'No routes yet. Add a route above.');
+            } else {
+                showMessage('loadMessage', '');
+            }
+        } catch (error) {
+            showMessage('loadMessage', error.message, true);
+        }
+    }
+
+    document.getElementById('routeForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        try {
+            await requestJson('api/admin/routes', {
+                method: 'POST',
+                body: JSON.stringify({
+                    source: document.getElementById('routeSource').value,
+                    destination: document.getElementById('routeDestination').value,
+                    transportationFee: Number(document.getElementById('routeFee').value)
+                })
+            });
+            event.target.reset();
+            showMessage('routeMessage', 'Route created.');
+            await loadRoutes();
+        } catch (error) {
+            showMessage('routeMessage', error.message, true);
+        }
+    });
+
+    document.getElementById('busForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        try {
+            await requestJson('api/admin/buses', {
+                method: 'POST',
+                body: JSON.stringify({
+                    busName: document.getElementById('busName').value,
+                    busNumber: document.getElementById('busNumber').value,
+                    totalSeats: Number(document.getElementById('totalSeats').value),
+                    routeId: Number(document.getElementById('busRoute').value),
+                    departureTime: document.getElementById('departureTime').value,
+                    arrivalTime: document.getElementById('arrivalTime').value
+                })
+            });
+            event.target.reset();
+            showMessage('busMessage', 'Bus registered and linked to its route.');
+        } catch (error) {
+            showMessage('busMessage', error.message, true);
+        }
+    });
+
+    document.getElementById('updateFeeButton').addEventListener('click', async () => {
+        const routeId = document.getElementById('feeRoute').value;
+        const fee = document.getElementById('updatedFee').value;
+        if (!routeId || fee === '') {
+            showMessage('feeMessage', 'Choose a route and enter a fee.', true);
+            return;
+        }
+        try {
+            await requestJson(`api/admin/routes/${encodeURIComponent(routeId)}/fee`, {
+                method: 'PUT',
+                body: JSON.stringify({ transportationFee: Number(fee) })
+            });
+            showMessage('feeMessage', 'Route fare and linked bus prices updated.');
+            await loadRoutes();
+        } catch (error) {
+            showMessage('feeMessage', error.message, true);
+        }
+    });
+
+    loadRoutes();
+</script>
+</body>
+</html>

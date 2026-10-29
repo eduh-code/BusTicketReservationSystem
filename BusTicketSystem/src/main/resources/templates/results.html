@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Buses - Bus Ticket Reservation System</title>
+    <style>
+        /* KEEP ALL YOUR EXISTING CSS HERE! (I'm not repeating it to save space,
+           just copy your original CSS block here) */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f4f7f6; padding: 30px 15px; color: #333; }
+        .container { width: 100%; max-width: 1100px; margin: auto; }
+        .header { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .header h1 { color: #007BFF; font-size: 28px; }
+        .header p { color: #777; margin-top: 5px; }
+        .back-btn { text-decoration: none; background: #007BFF; color: white; padding: 10px 18px; border-radius: 7px; font-weight: bold; }
+        .search-summary { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px; }
+        .summary-item { text-align: center; }
+        .summary-item span { display: block; color: #777; font-size: 13px; }
+        .summary-item strong { color: #222; font-size: 16px; }
+        .bus-card { background: white; border-radius: 15px; margin-bottom: 20px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); }
+        .bus-info { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr auto; align-items: center; gap: 15px; }
+        .bus-name { font-size: 19px; font-weight: bold; color: #222; }
+        .bus-number { color: #777; font-size: 13px; margin-top: 4px; }
+        .info-title { color: #888; font-size: 12px; display: block; margin-bottom: 4px; }
+        .info-value { font-weight: bold; color: #333; }
+        .price { color: #008f39; font-weight: bold; }
+        .view-seat-btn { background: #007BFF; color: white; border: none; padding: 11px 16px; border-radius: 7px; cursor: pointer; font-weight: bold; }
+        .seat-section { display: none; margin-top: 25px; border-top: 2px solid #eee; padding-top: 25px; }
+        .seat-section.active { display: block; }
+        .seat-title { text-align: center; margin-bottom: 15px; }
+        .legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+        .legend-item { display: flex; align-items: center; gap: 7px; font-size: 14px; }
+        .legend-box { width: 22px; height: 22px; border-radius: 5px; border: 1px solid #ccc; }
+        .available { background: white; }
+        .selected { background: #007BFF; border-color: #007BFF; }
+        .booked { background: #777; border-color: #777; }
+        .bus-layout { width: 100%; max-width: 560px; margin: auto; background: #e9eef3; border: 4px solid #444; border-radius: 40px 40px 20px 20px; padding: 20px 15px 30px; }
+        .front { background: #333; color: white; padding: 12px; text-align: center; border-radius: 20px 20px 8px 8px; margin-bottom: 20px; font-weight: bold; }
+        .driver-area { display: flex; justify-content: space-between; align-items: center; background: #d5dce3; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
+        .seat-row { display: grid; grid-template-columns: 1fr 1fr 40px 1fr 1fr; gap: 8px; margin-bottom: 10px; align-items: center; }
+        .aisle { height: 40px; }
+        .seat { height: 45px; border: 2px solid #bbb; border-radius: 8px; background: white; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 13px; font-weight: bold; transition: 0.2s; }
+        .seat:hover:not(.booked) { border-color: #007BFF; transform: scale(1.03); }
+        .seat.selected { background: #007BFF; color: white; border-color: #007BFF; }
+        .seat.booked { background: #777; color: white; border-color: #777; cursor: not-allowed; }
+        .selection-summary { margin-top: 25px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 10px; padding: 20px; }
+        .selection-summary h3 { margin-bottom: 12px; }
+        .selected-seats { min-height: 30px; color: #007BFF; font-weight: bold; margin-bottom: 12px; }
+        .total { font-size: 20px; font-weight: bold; color: #008f39; margin-bottom: 15px; }
+        .confirm-btn { width: 100%; padding: 13px; background: #28a745; color: white; border: none; border-radius: 7px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .confirm-btn:disabled { background: #aaa; cursor: not-allowed; }
+        @media (max-width: 900px) { .bus-info { grid-template-columns: 1fr 1fr 1fr; } }
+        @media (max-width: 600px) { body { padding: 15px 8px; } .header { flex-direction: column; text-align: center; } .bus-info { grid-template-columns: 1fr 1fr; } .bus-layout { padding: 15px 8px 25px; } .seat-row { grid-template-columns: 1fr 1fr 25px 1fr 1fr; gap: 5px; } .seat { height: 40px; font-size: 11px; } .aisle { height: 40px; } }
+    </style>
+</head>
+<body th:attr="data-app-root=@{/}">
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>🚌 Available Buses</h1>
+            <p>Select your preferred bus and seat.</p>
+        </div>
+        <a th:href="@{/(source=${source},destination=${destination},date=${date})}"
+           class="back-btn">← Back to Search</a>
+    </div>
+
+    <!-- This section will be filled dynamically -->
+    <div class="search-summary" id="searchSummary">
+        <div class="summary-item">
+            <span>From</span>
+            <strong id="fromSummary">Loading...</strong>
+        </div>
+        <div class="summary-item">
+            <span>To</span>
+            <strong id="toSummary">Loading...</strong>
+        </div>
+        <div class="summary-item">
+            <span>Travel Date</span>
+            <strong id="dateSummary">Loading...</strong>
+        </div>
+    </div>
+
+    <!-- Buses will be injected here -->
+    <div id="busesContainer"></div>
+</div>
+
+<script>
+    const appRoot = document.body.dataset.appRoot;
+    let selectedSeats = [];
+    let currentBusId = null;
+    let currentPrice = 0;
+
+    // 1. GET SEARCH PARAMETERS FROM URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const source = urlParams.get('source') || 'Dar es Salaam';
+    const destination = urlParams.get('destination') || 'Dodoma';
+    const date = urlParams.get('date') || new Date().toISOString().split('T')[0];
+
+    document.getElementById('fromSummary').innerText = source;
+    document.getElementById('toSummary').innerText = destination;
+    document.getElementById('dateSummary').innerText = date;
+
+    // 2. FETCH BUSES FROM BACKEND
+    async function fetchBuses() {
+        try {
+            const query = new URLSearchParams({ source, destination });
+            const response = await fetch(`${appRoot}api/search?${query}`);
+            if (!response.ok) {
+                throw new Error(`Bus search failed (${response.status})`);
+            }
+            const buses = await response.json();
+            renderBuses(buses);
+        } catch (error) {
+            console.error("Error fetching buses:", error);
+            document.getElementById('busesContainer').innerHTML =
+                '<div style="text-align:center; padding: 40px; color:#b00020;">Unable to load buses. Please try again.</div>';
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[character]);
+    }
+
+    // 3. RENDER BUSES DYNAMICALLY
+    function renderBuses(buses) {
+        const container = document.getElementById('busesContainer');
+        container.innerHTML = '';
+
+        if (buses.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding: 40px; color:#777;">No buses found for this route.</div>';
+            return;
+        }
+
+        buses.forEach((bus, index) => {
+            const busId = `bus${bus.id}`;
+            const busCard = document.createElement('div');
+            busCard.className = 'bus-card';
+
+            // Note: We are generating the seat layout dynamically here based on totalSeats
+            let seatHTML = '';
+            let totalSeatCount = bus.totalSeats;
+            for (let i = 0; i < totalSeatCount; i += 4) {
+                let seatRow = document.createElement('div');
+                seatRow.className = 'seat-row';
+
+                for (let j = 1; j <= 4; j++) {
+                    let seatNum = i + j;
+                    if (seatNum > totalSeatCount) break;
+
+                    if (j === 3) {
+                        let aisle = document.createElement('div');
+                        aisle.className = 'aisle';
+                        seatRow.appendChild(aisle);
+                    }
+
+                    let seat = document.createElement('div');
+                    seat.className = 'seat';
+                    seat.innerText = seatNum;
+                    seat.dataset.seat = seatNum;
+                    seatRow.appendChild(seat);
+                }
+                seatHTML += seatRow.outerHTML;
+            }
+
+            busCard.innerHTML = `
+                <div class="bus-info">
+                    <div>
+                        <div class="bus-name">${escapeHtml(bus.busName)}</div>
+                        <div class="bus-number">Bus No: ${escapeHtml(bus.busNumber)}</div>
+                    </div>
+                    <div><span class="info-title">Departure</span><span class="info-value">${escapeHtml(bus.departureTime)}</span></div>
+                    <div><span class="info-title">Arrival</span><span class="info-value">${escapeHtml(bus.arrivalTime)}</span></div>
+                    <div><span class="info-title">Price</span><span class="price">Tshs ${bus.price.toLocaleString()}/=</span></div>
+                    <div><span class="info-title">Available</span><span class="info-value">${bus.totalSeats} Seats</span></div>
+                    <button class="view-seat-btn" onclick="showSeats('${busId}', ${bus.id}, ${bus.price})">View Seats</button>
+                </div>
+                <div class="seat-section" id="${busId}">
+                    <div class="seat-title"><h2>🪑 Select Your Seat</h2><p>${escapeHtml(bus.busName)} - 2 × 2 Seating</p></div>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-box available"></div>Available</div>
+                        <div class="legend-item"><div class="legend-box selected"></div>Selected</div>
+                        <div class="legend-item"><div class="legend-box booked"></div>Booked</div>
+                    </div>
+                    <div class="bus-layout">
+                        <div class="front">FRONT OF BUS</div>
+                        <div class="driver-area"><span>🚪 Entrance</span><strong>🧑‍✈️ DRIVER</strong><span>🚌 Bus</span></div>
+                        ${seatHTML}
+                    </div>
+                    <div class="selection-summary">
+                        <h3>Selected Seats</h3>
+                        <div class="selected-seats" id="selectedSeats${bus.id}">No seat selected</div>
+                        <div class="total">Total: <span id="totalPrice${bus.id}">Tshs 0/=</span></div>
+                        <button class="confirm-btn" id="confirm${bus.id}" onclick="confirmBooking(${bus.id})" disabled>Confirm Selected Seats</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(busCard);
+            busCard.querySelectorAll('.seat').forEach(seat => {
+                seat.onclick = function() { selectSeat(this, bus.id, bus.price); };
+            });
+            fetchBookedSeats(bus.id, busCard);
+        });
+    }
+
+    async function fetchBookedSeats(busId, busCard) {
+        try {
+            const response = await fetch(`${appRoot}api/buses/${encodeURIComponent(busId)}/booked-seats`);
+            if (!response.ok) {
+                throw new Error(`Could not load booked seats for bus ${busId}`);
+            }
+            const bookedSeats = await response.json();
+            bookedSeats.forEach(seatNumber => {
+                const seat = busCard.querySelector(`.seat[data-seat="${seatNumber}"]`);
+                if (seat) {
+                    seat.classList.add('booked');
+                    seat.onclick = null;
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching booked seats:", error);
+        }
+    }
+
+    // 4. SHOW SEATS (Your existing logic, adapted)
+    function showSeats(busId, id, price) {
+        const section = document.getElementById(busId);
+        document.querySelectorAll(".seat-section").forEach(item => item.classList.remove("active"));
+        section.classList.toggle("active");
+
+        document.querySelectorAll('.seat.selected').forEach(seat => seat.classList.remove('selected'));
+        currentBusId = id;
+        currentPrice = price;
+        selectedSeats = [];
+
+        // Clear previous selections in this specific bus
+        section.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
+        updateSelection(id);
+    }
+
+    // 5. SELECT SEAT (Your existing logic)
+    function selectSeat(seat, id, price) {
+        if (seat.classList.contains("booked")) return;
+        let seatNumber = seat.dataset.seat;
+
+        if (seat.classList.contains("selected")) {
+            seat.classList.remove("selected");
+            selectedSeats = selectedSeats.filter(num => num !== seatNumber);
+        } else {
+            seat.classList.add("selected");
+            selectedSeats.push(seatNumber);
+        }
+
+        currentBusId = id;
+        currentPrice = price;
+        updateSelection(id);
+    }
+
+    // 6. UPDATE SELECTION SUMMARY (Your existing logic)
+    function updateSelection(id) {
+        let selectedDisplay = document.getElementById("selectedSeats" + id);
+        let totalDisplay = document.getElementById("totalPrice" + id);
+        let confirmButton = document.getElementById("confirm" + id);
+
+        if (selectedSeats.length === 0) {
+            selectedDisplay.innerText = "No seat selected";
+            totalDisplay.innerText = "Tshs 0/=";
+            confirmButton.disabled = true;
+        } else {
+            selectedDisplay.innerText = "Seat " + selectedSeats.join(", Seat ");
+            let total = selectedSeats.length * currentPrice;
+            totalDisplay.innerText = "Tshs " + total.toLocaleString() + "/=";
+            confirmButton.disabled = false;
+        }
+    }
+
+    // 7. CONFIRM BOOKING (Sends to backend)
+    async function confirmBooking(id) {
+        if (selectedSeats.length === 0 || currentBusId !== id) return;
+
+        let total = selectedSeats.length * currentPrice;
+
+        // Collect passenger details (In a real app, you would have a form for this before confirming)
+        const passengerName = prompt("Enter your name:");
+        const passengerEmail = prompt("Enter your email:");
+
+        if (!passengerName?.trim() || !passengerEmail?.trim()) {
+            alert("Name and Email are required to confirm booking.");
+            return;
+        }
+
+        const bookingData = {
+            busId: id,
+            seats: selectedSeats.join(", "),
+            totalPrice: total,
+            passengerName: passengerName.trim(),
+            passengerEmail: passengerEmail.trim()
+        };
+
+        const confirmButton = document.getElementById(`confirm${id}`);
+        confirmButton.disabled = true;
+        try {
+            const response = await fetch(`${appRoot}api/book`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingData)
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (response.ok) {
+                window.location.href = `${appRoot}payment?bookingId=${encodeURIComponent(result.bookingId)}`;
+            } else {
+                alert("❌ Booking Failed: " + (result.error || result.detail || result.message || response.statusText));
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("❌ An error occurred while booking.");
+        } finally {
+            if (document.getElementById(`confirm${id}`)) {
+                document.getElementById(`confirm${id}`).disabled = selectedSeats.length === 0;
+            }
+        }
+    }
+
+    // Run on page load
+    fetchBuses();
+</script>
+</body>
+</html>
